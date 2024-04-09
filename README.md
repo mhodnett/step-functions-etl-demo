@@ -35,7 +35,7 @@ The parameter store config information, in this scenario it would be S3 location
 In order to deploy the example, you need to run the following command:
 
 ```
-$ serverless deploy -- stage dev1
+$ serverless deploy --stage dev1
 ```
 
 After running deploy, you should see output similar to:
@@ -51,9 +51,10 @@ functions:
   step1: step-functions-etl-demo-lambda-step2-dev1 (799 B)
 ```
 
+
 ### Creating the stacks and testing the functionality
 
-After successful deployment, you can invoke the step function by using the following command:
+Once you have deployed to stage ```dev1```, it creates a step function for that stage called ```etl-job-step-function-dev1```. You can invoke the step function by using the following command:
 
 ```bash
 aws stepfunctions start-execution --state-machine-arn arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:etl-job-step-function-dev1 --input '{}'
@@ -100,13 +101,16 @@ The second Lambda function would have read and written data to these locations:
  - Data Source=bucket1/destination/developer1/step1/  
  - Data Destination=bucket1/destination/developer1/step2/  
 
- 
-A second developer could also deploy the stack and it would create a new complete set of resources for that developer. They could change their parameters and therefore work on a single step in the Step Functions. They could do this be editing the file in params/dev2-etl-params and deploying it to a new stage:
+
+
+### Deploying to a second stage for an additional developer
+
+A second developer could also deploy the stack and it would create a complete new set of resources for that developer. They could change their parameters and therefore work on different data and / or a different Lambda function to the first developer. They could do this be editing the file in params/dev2-etl-params and deploying it to a new stage:
 ```
-$ serverless deploy -- stage dev1
+$ serverless deploy --stage dev2
 ```
 
-After this, there would be 2 step functions, 4 Lambda functions, 2 roles and 2 sets of parameters. The second developer could then make changes to either Lambda function and test the changes without impacting on developer 1. For example, if they ran
+After this, there would be new step functions, 2 new Lambda functions, 1 new roles and 1 new parameter values deployed. The second developer could then make changes to either Lambda function and test the changes without impacting on developer 1. For example, if they ran
 ```bash
 aws stepfunctions start-execution --state-machine-arn arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:etl-job-step-function-dev2 --input '{}'
 ```
@@ -117,8 +121,8 @@ aws stepfunctions describe-execution --execution-arn arn:aws:states:eu-west-1:XX
 then, they should see output similar to this:
 ```json
 {
-    "executionArn": "arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev1:11111111-2222-3333-4444-555555555555",
-    "stateMachineArn": "arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:step-functions-etl-demo-step-function-dev1",
+    "executionArn": "arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev2:11111111-2222-3333-4444-555555555555",
+    "stateMachineArn": "arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:step-functions-etl-demo-step-function-dev2",
     "name": "64c84688-d97e-4277-b1e7-5a46e39112a5",
     "status": "SUCCEEDED",
     .........
@@ -138,11 +142,13 @@ The second Lambda function would have read and written data to these locations:
  - Data Source=bucket1/destination/developer2/step1/  
  - Data Destination=bucket1/destination/developer2/step2/  
 
+Note the difference in the paths here. The second developer has full control over the code and the data that they use. 
 
 
-### Cleanup
+
+## Cleanup
 When done, run ```serverless remove``` for each stage you deployed, e.g.
 ```
-$ serverless remove -- stage dev1
-$ serverless remove -- stage dev2
+$ serverless remove --stage dev1
+$ serverless remove --stage dev2
 ```
