@@ -12,9 +12,21 @@ authorAvatar: 'https://avatars1.githubusercontent.com/u/13742415?s=200&v=4'
 -->
 
 
-# ETL Step Functions Example
+# Step Functions ETL Demo
 
-This template demonstrates how to deploy a multi-step ETL job using Step Functions using the Serverless Framework.
+This template demonstrates how to deploy a multi-step ETL job using Step Functions using the Serverless Framework. It also allows for multiple developers to work concurrently on different steps in the pipeline using stages. Each developer can deploy the stack independently, and their changes will not impact on other developers. Each deployment uses AWS Systems Manager Parameter Store to manage its parameters. In this example, we use it to store the source and destination locations for the data for each step in the pipeline.  
+When deployed, this project creates the following resources:  
+ - One Step Function
+ - Two Lambda functions
+ - One set of parameters in AWS Systems Manager Parameter Store
+ - One Role to allow the Lambda functions to access the parameters
+
+The Step Function has two steps:  
+![Step Functions](images/step_function.png)
+
+The parameter store config information, in this scenario it would be S3 locations:  
+![Parameter store](images/ssm.png)
+
 
 ## Usage
 
@@ -23,60 +35,109 @@ This template demonstrates how to deploy a multi-step ETL job using Step Functio
 In order to deploy the example, you need to run the following command:
 
 ```
-$ serverless deploy
+$ serverless deploy -- stage dev1
 ```
 
 After running deploy, you should see output similar to:
 
 ```bash
-Deploying aws-python-project to stage dev (us-east-1)
+Deploying step-functions-etl-demo to stage dev1 (eu-west-1)
+✔ State machine "step_job" definition is valid
 
-✔ Service deployed to stack aws-python-project-dev (112s)
+✔ Service deployed to stack step-functions-etl-demo-dev1 (78s)
 
 functions:
-  hello: aws-python-project-dev-hello (1.5 kB)
+  step1: step-functions-etl-demo-lambda-step1-dev1 (813 B)
+  step1: step-functions-etl-demo-lambda-step2-dev1 (799 B)
 ```
 
-### Invocation
+### Creating the stacks and testing the functionality
 
-After successful deployment, you can invoke the deployed function by using the following command:
+After successful deployment, you can invoke the step function by using the following command:
 
 ```bash
-serverless invoke --function hello
+aws stepfunctions start-execution --state-machine-arn arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:etl-job-step-function-dev1 --input '{}'
 ```
+note: You must swap the XXXXXXXXX with the AWS account name. Alternatively, you can get the State Machine's ARN from the console
 
 Which should result in response similar to the following:
-
 ```json
 {
-    "statusCode": 200,
-    "body": "{\"message\": \"Go Serverless v3.0! Your function executed successfully!\", \"input\": {}}"
+    "executionArn": "arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev1:11111111-2222-3333-4444-555555555555",
+    "startDate": "2024-04-09T10:23:03.325000+00:00"
 }
 ```
 
-### Local development
-
-You can invoke your function locally by using the following command:
-
+You can then see the results by taking the value for executionArn from above and copying into this command
 ```bash
-serverless invoke local --function hello
+aws stepfunctions describe-execution --execution-arn {executionArn}
 ```
-
-Which should result in response similar to the following:
-
+e.g.
+```bash
+aws stepfunctions describe-execution --execution-arn arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev1:11111111-2222-3333-4444-555555555555
 ```
+This should produce output similar to this:
+```json
 {
-    "statusCode": 200,
-    "body": "{\"message\": \"Go Serverless v3.0! Your function executed successfully!\", \"input\": {}}"
+    "executionArn": "arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev1:11111111-2222-3333-4444-555555555555",
+    "stateMachineArn": "arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:step-functions-etl-demo-step-function-dev1",
+    "name": "64c84688-d97e-4277-b1e7-5a46e39112a5",
+    "status": "SUCCEEDED",
+    .........
+    "inputDetails": {
+        "included": true
+    },
+    "output": "\"Step=1, STAGE=dev1, Data Source=bucket1/source/dev/, Data Destination=bucket1/destination/developer1/step1/. Step=2, STAGE=dev1, Data Source=bucket1/destination/developer1/step1/, Data Destination=bucket1/destination/developer1/step2/\"",
+    ........
 }
 ```
+The output contains the source and destination for the two steps in the process. The first Lambda function would have read and written data to these locations:
+ - Data Source=bucket1/source/dev/
+ - Data Destination=bucket1/destination/developer1/step1/
+The second Lambda function would have read and written data to these locations
+ - Data Source=bucket1/destination/developer1/step1/
+ - Data Destination=bucket1/destination/developer1/step2/
 
-### Bundling dependencies
-
-In case you would like to include third-party dependencies, you will need to use a plugin called `serverless-python-requirements`. You can set it up by running the following command:
-
-```bash
-serverless plugin install -n serverless-python-requirements
+ 
+A second developer could also deploy the stack and it would create a new complete set of resources for that developer. They could change their parameters and therefore work on a single step in the Step Functions. They could do this be editing the file in params/dev2-etl-params and deploying it to a new stage:
+```
+$ serverless deploy -- stage dev1
 ```
 
-Running the above will automatically add `serverless-python-requirements` to `plugins` section in your `serverless.yml` file and add it as a `devDependency` to `package.json` file. The `package.json` file will be automatically created if it doesn't exist beforehand. Now you will be able to add your dependencies to `requirements.txt` file (`Pipfile` and `pyproject.toml` is also supported but requires additional configuration) and they will be automatically injected to Lambda package during build process. For more details about the plugin's configuration, please refer to [official documentation](https://github.com/UnitedIncome/serverless-python-requirements).
+After this, there would be 2 step functions, 4 Lambda functions, 2 roles and 2 sets of parameters. The second developer could then make changes to either Lambda function and test the changes without impacting on developer 1. For example, if they ran
+```bash
+aws stepfunctions start-execution --state-machine-arn arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:etl-job-step-function-dev2 --input '{}'
+```
+and then 
+```bash
+aws stepfunctions describe-execution --execution-arn arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev2:66666666-7777-8888-9999-000000000000
+```
+then, they should see output similar to this:
+```json
+{
+    "executionArn": "arn:aws:states:eu-west-1:XXXXXXXXX:execution:step-functions-etl-demo-step-function-dev1:11111111-2222-3333-4444-555555555555",
+    "stateMachineArn": "arn:aws:states:eu-west-1:XXXXXXXXX:stateMachine:step-functions-etl-demo-step-function-dev1",
+    "name": "64c84688-d97e-4277-b1e7-5a46e39112a5",
+    "status": "SUCCEEDED",
+    .........
+    "inputDetails": {
+        "included": true
+    },
+     "output": "\"Step=1, STAGE=dev2, Data Source=bucket1/source/dev/, Data Destination=bucket1/destination/developer2/step1/. Step=2, STAGE=dev2, Data Source=bucket1/destination/developer2/step1/, Data Destination=bucket1/destination/developer2/step2/\"",
+    ........
+}
+```
+The output contains the source and destination for the two steps in the process. The first Lambda function would have read and written data to these locations:
+ - Data Source=bucket1/source/dev/
+ - Data Destination=bucket1/destination/developer2/step1/
+The second Lambda function would have read and written data to these locations
+ - Data Source=bucket1/destination/developer2/step1/
+ - Data Destination=bucket1/destination/developer2/step2/
+
+
+### Cleanup
+When done, run ```serverless remove``` for each stage you deployed, e.g.
+```
+$ serverless remove -- stage dev1
+$ serverless remove -- stage dev2
+```
