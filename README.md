@@ -91,9 +91,11 @@ This should produce output similar to this:
     ........
 }
 ```
+
 The output contains the source and destination for the two steps in the process. The first Lambda function would have read and written data to these locations:
  - Data Source=bucket1/source/dev/  
  - Data Destination=bucket1/destination/developer1/step1/  
+
 The second Lambda function would have read and written data to these locations:
  - Data Source=bucket1/destination/developer1/step1/  
  - Data Destination=bucket1/destination/developer1/step2/  
@@ -127,12 +129,15 @@ then, they should see output similar to this:
     ........
 }
 ```
+
 The output contains the source and destination for the two steps in the process. The first Lambda function would have read and written data to these locations:
  - Data Source=bucket1/source/dev/  
  - Data Destination=bucket1/destination/developer2/step1/  
+
 The second Lambda function would have read and written data to these locations:  
  - Data Source=bucket1/destination/developer2/step1/  
  - Data Destination=bucket1/destination/developer2/step2/  
+
 
 
 ### Cleanup
