@@ -92,11 +92,11 @@ This should produce output similar to this:
 }
 ```
 The output contains the source and destination for the two steps in the process. The first Lambda function would have read and written data to these locations:
- - Data Source=bucket1/source/dev/
- - Data Destination=bucket1/destination/developer1/step1/
-The second Lambda function would have read and written data to these locations
- - Data Source=bucket1/destination/developer1/step1/
- - Data Destination=bucket1/destination/developer1/step2/
+ - Data Source=bucket1/source/dev/  
+ - Data Destination=bucket1/destination/developer1/step1/  
+The second Lambda function would have read and written data to these locations:
+ - Data Source=bucket1/destination/developer1/step1/  
+ - Data Destination=bucket1/destination/developer1/step2/  
 
  
 A second developer could also deploy the stack and it would create a new complete set of resources for that developer. They could change their parameters and therefore work on a single step in the Step Functions. They could do this be editing the file in params/dev2-etl-params and deploying it to a new stage:
@@ -128,11 +128,11 @@ then, they should see output similar to this:
 }
 ```
 The output contains the source and destination for the two steps in the process. The first Lambda function would have read and written data to these locations:
- - Data Source=bucket1/source/dev/
- - Data Destination=bucket1/destination/developer2/step1/
-The second Lambda function would have read and written data to these locations
- - Data Source=bucket1/destination/developer2/step1/
- - Data Destination=bucket1/destination/developer2/step2/
+ - Data Source=bucket1/source/dev/  
+ - Data Destination=bucket1/destination/developer2/step1/  
+The second Lambda function would have read and written data to these locations:  
+ - Data Source=bucket1/destination/developer2/step1/  
+ - Data Destination=bucket1/destination/developer2/step2/  
 
 
 ### Cleanup
